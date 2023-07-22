@@ -20,6 +20,12 @@
             <artifactId>spring-context</artifactId>
             <version>5.3.8</version>
         </dependency>
+    <!--加入切面编程基本包-->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-aspects</artifactId>
+            <version>5.3.8</version>
+        </dependency>
     </dependencies>
 
 </project>
