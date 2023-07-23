@@ -1,6 +1,6 @@
 package asia.lhweb.spring.component;
 
-import asia.lhweb.spring.annotation.Component;
+import asia.lhweb.spring.annotation.Service;
 
 /**
  * MonsterService是一个service
@@ -9,7 +9,7 @@ import asia.lhweb.spring.annotation.Component;
  * @author 罗汉
  * @date 2023/07/23
  */
-@Component(value = "monsterService")//把MonsterService注入到我们自己的容器中
+@Service(value = "monsterService")//把MonsterService注入到我们自己的容器中
 public class MonsterService {
 
 }

@@ -1,12 +1,13 @@
 package asia.lhweb.spring.component;
 
-import asia.lhweb.spring.annotation.Component;
+
+import asia.lhweb.spring.annotation.Repository;
 
 /**
  *
  * @author 罗汉
  * @date 2023/07/23
  */
-@Component(value = "monsterDAO")
+@Repository(value = "monsterDAO")
 public class MonsterDAO {
 }

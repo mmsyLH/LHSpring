@@ -1,11 +1,7 @@
 package asia.lhweb.spring.ioc;
 
-import asia.lhweb.spring.annotation.Component;
-import asia.lhweb.spring.annotation.ComponentScan;
+import asia.lhweb.spring.annotation.*;
 
-import org.springframework.stereotype.Controller;
-import org.springframework.stereotype.Repository;
-import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.io.File;
@@ -25,19 +21,19 @@ public class LHSpringApplicationContext {
 
     public LHSpringApplicationContext(Class configClass) {
         this.configClass = configClass;
-        System.out.println("配置的路径：this.configClass =" + configClass);
+        // System.out.println("配置的路径：this.configClass =" + configClass);
         // 1得到注解
         ComponentScan componentScan = (ComponentScan) this.configClass.getAnnotation(ComponentScan.class);
         // 2通过componentScan得到要扫描的包
         String path = componentScan.value();
-        System.out.println("要扫码的包为:path=" + path);
+        // System.out.println("要扫码的包为:path=" + path);
 
         // 1 得到类加载器->APP 类加载器
         ClassLoader classLoader = LHSpringApplicationContext.class.getClassLoader();
         // 2 获取扫描包的url
         path = path.replace(".", "/");
         URL resource = classLoader.getResource(path);
-        System.out.println(resource);
+        // System.out.println(resource);
         File file = new File(resource.getFile());
         if (file.isDirectory()) {
             File[] files = file.listFiles();
@@ -70,6 +66,7 @@ public class LHSpringApplicationContext {
                                 || (clazz.isAnnotationPresent(Repository.class))) {
 
                             if (clazz.isAnnotationPresent(Service.class)){
+                                System.out.println("这是一个LHSpring bean="+clazz+"    类名="+className);
                                 Service declaredAnnotation = clazz.getDeclaredAnnotation(Service.class);
                                 String id = declaredAnnotation.value();
                                 if (!StringUtils.isEmpty(id)){
@@ -77,8 +74,24 @@ public class LHSpringApplicationContext {
                                 }
                             }
                             if (clazz.isAnnotationPresent(Component.class)){
-                                System.out.println("这是一个Spring bean="+clazz);
+                                System.out.println("这是一个LHSpring bean="+clazz+"    类名="+className);
                                 Component declaredAnnotation = clazz.getDeclaredAnnotation(Component.class);
+                                String id = declaredAnnotation.value();
+                                if (!StringUtils.isEmpty(id)){
+                                    className=id;//替换
+                                }
+                            }
+                            if (clazz.isAnnotationPresent(Controller.class)){
+                                System.out.println("这是一个LHSpring bean="+clazz+"    类名="+className);
+                                Controller declaredAnnotation = clazz.getDeclaredAnnotation(Controller.class);
+                                String id = declaredAnnotation.value();
+                                if (!StringUtils.isEmpty(id)){
+                                    className=id;//替换
+                                }
+                            }
+                            if (clazz.isAnnotationPresent(Repository.class)){
+                                System.out.println("这是一个LHSpring bean="+clazz+"    类名="+className);
+                                Repository declaredAnnotation = clazz.getDeclaredAnnotation(Repository.class);
                                 String id = declaredAnnotation.value();
                                 if (!StringUtils.isEmpty(id)){
                                     className=id;//替换
@@ -86,7 +99,7 @@ public class LHSpringApplicationContext {
                             }
 
                         }else {
-                            System.out.println("这不是一个Spring bean="+clazz);
+                            System.out.println("这不是一个LHSpring bean="+clazz);
                         }
 
                     } catch (Exception e) {
