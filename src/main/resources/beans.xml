@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd">
+
+
+    <!--配置自动扫描-->
+    <!--
+    如果是普通的java项目 beans.xml就在src下
+    如果是maven项目
+    -->
+    <context:component-scan base-package="asia.lhweb.spring.component"/>
+    <context:component-scan base-package="asia.lhweb.spring.process"/>
+    <context:component-scan base-package="asia.lhweb.spring.aop"/>
+    <!--配置后置处理器-->
+    <!--<bean class="asia.lhweb.spring.process.MyBeanPostProcess" id="myBeanPostProcess"/>-->
+
+    <!--    启用基于注解的aop-->
+    <aop:aspectj-autoproxy/>
+
+</beans>
