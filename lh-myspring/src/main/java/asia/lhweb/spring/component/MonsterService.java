@@ -1,5 +1,6 @@
 package asia.lhweb.spring.component;
 
+import asia.lhweb.spring.annotation.Scope;
 import asia.lhweb.spring.annotation.Service;
 
 /**
@@ -9,7 +10,9 @@ import asia.lhweb.spring.annotation.Service;
  * @author 罗汉
  * @date 2023/07/23
  */
-@Service(value = "monsterService")//把MonsterService注入到我们自己的容器中
+// @Service(value = "monsterService")//阶段1 把MonsterService注入到我们自己的容器中
+@Scope(value = "prototype")
+@Service//阶段2
 public class MonsterService {
 
 }

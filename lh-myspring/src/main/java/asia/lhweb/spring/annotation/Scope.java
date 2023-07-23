@@ -6,15 +6,14 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 服务
+ * 可以指定bean的作用范围【singleton,prototype】
  *
  * @author 罗汉
  * @date 2023/07/23
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-
-public @interface Service {
-    //通过value可以给注入的bean指定id 名字
+public @interface Scope {
+    //通过value可以指定是singleton还是prototype
     String value() default "";
 }
