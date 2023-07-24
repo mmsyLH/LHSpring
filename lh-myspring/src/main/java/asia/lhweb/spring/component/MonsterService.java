@@ -1,7 +1,9 @@
 package asia.lhweb.spring.component;
 
+import asia.lhweb.spring.annotation.Autowired;
 import asia.lhweb.spring.annotation.Scope;
 import asia.lhweb.spring.annotation.Service;
+import asia.lhweb.spring.processor.InitializingBean;
 
 /**
  * MonsterService是一个service
@@ -13,6 +15,20 @@ import asia.lhweb.spring.annotation.Service;
 // @Service(value = "monsterService")//阶段1 把MonsterService注入到我们自己的容器中
 @Scope(value = "prototype")
 @Service//阶段2
-public class MonsterService {
+public class MonsterService implements InitializingBean {
+    @Autowired
+    private MonsterDAO monsterDAO;
+    public void hello(){
+        monsterDAO.hi();
+    }
 
+    /**
+     * 这个方法就是bean的初始化方法
+     *
+     * @throws Exception 异常
+     */
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        System.out.println("初始化方法被调用");
+    }
 }

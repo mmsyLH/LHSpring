@@ -1,12 +1,17 @@
 package asia.lhweb.spring.ioc;
 
 import asia.lhweb.spring.annotation.*;
+import asia.lhweb.spring.processor.BeanPostProcessor;
+import asia.lhweb.spring.processor.InitializingBean;
 import org.springframework.util.StringUtils;
 
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -21,26 +26,29 @@ public class LHSpringApplicationContext {
     private final ConcurrentHashMap<String, BeanDefinition> beanDefinitonMap = new ConcurrentHashMap<>();// 存放BeanDefiniton对象
     private final ConcurrentHashMap<String, Object> singletonObjects = new ConcurrentHashMap<>();// 存放单例对象
 
+    //定义一个属性 用来存放后置处理器
+    private  List<BeanPostProcessor> beanPostProcessorList=new ArrayList<BeanPostProcessor>();
+
     public LHSpringApplicationContext(Class configClass) {
-        //完成扫描
+        // 完成扫描
         beanDefinitonByScan(configClass);
 
-        //通过beanDefinitonMap，初始化单例池 singletonObjects
+        // 通过beanDefinitonMap，初始化单例池 singletonObjects
         System.out.println("beanDefinitonMap=" + beanDefinitonMap);
-        Enumeration<String> keys = beanDefinitonMap.keys();//kes指的是全部bean的名字
-        while (keys.hasMoreElements()){
-            //得到beanName
+        Enumeration<String> keys = beanDefinitonMap.keys();// kes指的是全部bean的名字
+        while (keys.hasMoreElements()) {
+            // 得到beanName
             String beanName = keys.nextElement();
             // System.out.println(beanName);
 
-            //通过BeanName 得到对应的beanDefinition对象
+            // 通过BeanName 得到对应的beanDefinition对象
             BeanDefinition beanDefinition = beanDefinitonMap.get(beanName);
             // System.out.println(beanDefinition);
-            //判断该bean是singleton还是prototype
-            if ("singleton".equalsIgnoreCase(beanDefinition.getScope())){//是单例
-                //将该bean实例放入到singletonObjects
-                Object bean = createBean(beanDefinition);
-                singletonObjects.put(beanName,bean);
+            // 判断该bean是singleton还是prototype
+            if ("singleton".equalsIgnoreCase(beanDefinition.getScope())) {// 是单例
+                // 将该bean实例放入到singletonObjects
+                Object bean = createBean(beanName,beanDefinition);
+                singletonObjects.put(beanName, bean);
             }
 
         }
@@ -93,10 +101,7 @@ public class LHSpringApplicationContext {
                         // 2 classLoader.loadClass 不会调用该类的静态方法
                         // 3 isAnnotationPresent判断该类是否有这个注解
                         Class<?> clazz = classLoader.loadClass(classFullName);
-                        if (clazz.isAnnotationPresent(Service.class)
-                                || (clazz.isAnnotationPresent(Component.class))
-                                || (clazz.isAnnotationPresent(Controller.class))
-                                || (clazz.isAnnotationPresent(Repository.class))) {
+                        if (clazz.isAnnotationPresent(Service.class) || (clazz.isAnnotationPresent(Component.class)) || (clazz.isAnnotationPresent(Controller.class)) || (clazz.isAnnotationPresent(Repository.class))) {
 
                             if (clazz.isAnnotationPresent(Service.class)) {
                                 System.out.println("这是一个LHSpring bean=" + clazz + "    类名=" + className);
@@ -109,6 +114,21 @@ public class LHSpringApplicationContext {
                             }
 
                             if (clazz.isAnnotationPresent(Component.class)) {
+
+                                //为了方便 将后置处理器放到list集合中
+                                //1 如果发现是一个后置处理器
+                                //2 在原生spring容器中，对后置处理器还是走的getBean，createBean
+                                //但是需要再单例池中加对应的逻辑，这里只是为了体验 所以直接放入到list集合中
+
+                                //判断是否实现是后置处理器
+                                //这里不能使用 instanceof 来判断 原因：clazz不是一个实例对象，而是一个类对象
+                                if (BeanPostProcessor.class.isAssignableFrom(clazz)){
+                                    BeanPostProcessor instance = (BeanPostProcessor) clazz.newInstance();
+                                    //放入到集合中
+                                    beanPostProcessorList.add(instance);
+                                    continue;
+                                }
+
                                 System.out.println("这是一个LHSpring bean=" + clazz + "    类名=" + className);
                                 Component declaredAnnotation = clazz.getDeclaredAnnotation(Component.class);
                                 String beanName = declaredAnnotation.value();
@@ -175,13 +195,65 @@ public class LHSpringApplicationContext {
      *
      * @param beanDefinition bean定义
      */
-    private Object createBean(BeanDefinition beanDefinition) {
+    private Object createBean(String beanName,BeanDefinition beanDefinition) {
         // 得到Bean的clazz对象
         Class clazz = beanDefinition.getClazz();
-
         try {
             // 使用反射得到实例
             Object instance = clazz.getDeclaredConstructor().newInstance();
+
+            // 加入依赖注入的业务逻辑
+            // 1 遍历当前要创建的对象的所有字段
+            for (Field declaredField : clazz.getDeclaredFields()) {
+                // 2 判断这个字段是否有Autowired注解修饰
+                if (declaredField.isAnnotationPresent(Autowired.class)) {
+                    // 3得到字段的名字
+                    String name = declaredField.getName();
+                    // 4 通过getBean方法来获取要组装的对象
+                    Object bean = getBean(name);
+                    // 5 进行组装
+                    // 因为属性是私有的不能反射 所以需要爆破
+                    declaredField.setAccessible(true);
+                    declaredField.set(instance, bean);// 第一个是需要组装的对象  第二个参数是你要组装的东西
+                }
+            }
+            System.out.println();
+
+            System.out.println("=========创建好bean====="+instance);
+
+            //在bean的初始化方法前调用后置处理器方法
+            for (BeanPostProcessor beanPostProcessor : beanPostProcessorList) {
+                //在后置处理器的before方法前可以对Bean进行处理 ， 然后再返回处理后的bean
+                //相当于做了一个前置处理
+                Object current=
+                        beanPostProcessor.postProcessBeforeInitialization(instance, beanName);
+                if (current!=null){
+                    instance=current;
+                }
+            }
+
+            //这里判断是执行bean的初始化方法
+            // 1 判断当前创建的bean对象是否实现了InitializingBean接口
+            if (instance instanceof InitializingBean){
+                // 2 将instance转成InitializingBean类型
+                try {
+                    ((InitializingBean)instance).afterPropertiesSet();
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            //在bean的初始化方法后调用后置处理器方法
+            for (BeanPostProcessor beanPostProcessor : beanPostProcessorList) {
+                //在后置处理器的after方法前可以对Bean进行处理 ， 然后再返回处理后的bean
+                //相当于做了后置处理
+                Object current=
+                        beanPostProcessor.postProcessAfterInitialization(instance, beanName);
+                if (current!=null){
+                    instance=current;
+                }
+            }
+
             return instance;
         } catch (Exception e) {
             e.printStackTrace();
@@ -197,19 +269,19 @@ public class LHSpringApplicationContext {
      * @return {@link Object}
      */
     public Object getBean(String beanName) {
-        //判断 传入的beanName是否在beanDefinitonMap中存在
-        if (beanDefinitonMap.containsKey(beanName)){//存在
+        // 判断 传入的beanName是否在beanDefinitonMap中存在
+        if (beanDefinitonMap.containsKey(beanName)) {// 存在
             BeanDefinition beanDefinition = beanDefinitonMap.get(beanName);
-            //得到beanDefinition的scope，分别进行处理
-            if ("singleton".equalsIgnoreCase(beanDefinition.getScope())){
-                //说明是单例的，就直接从单例池获取
+            // 得到beanDefinition的scope，分别进行处理
+            if ("singleton".equalsIgnoreCase(beanDefinition.getScope())) {
+                // 说明是单例的，就直接从单例池获取
                 return singletonObjects.get(beanName);
-            }else {//不是单例就调用creatBean，反射一个对象
-                return createBean(beanDefinition);
+            } else {// 不是单例就调用creatBean，反射一个对象
+                return createBean(beanName,beanDefinition);
             }
-        }else {//不存在
-            //抛出个空指针异常
-            throw  new NullPointerException("没有该bean");
+        } else {// 不存在
+            // 抛出个空指针异常
+            throw new NullPointerException("没有该bean");
 
         }
 
